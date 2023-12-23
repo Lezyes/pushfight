@@ -23,24 +23,26 @@
 (def void-cell {:type :void})
 
 
-(def black-square {:type :sqaure
-                   :team :black})
+(def square-piece {:type :square})
 
 
-(def black-round  {:type :round
-                   :team :black})
+(def round-piece {:type :round})
 
 
-(def white-square {:type :sqaure
-                   :team :white})
+(def black-square (assoc square-piece :team :black))
 
 
-(def white-round  {:type :round
-                   :team :white})
+(def black-round  (assoc round-piece :team :black))
+
+
+(def white-square (assoc square-piece :team :white))
+
+
+(def white-round  (assoc round-piece :team :white))
 
 
 (defn pusher? [{type :type}]
-  (= type :square))
+  (= type (:type square-piece)))
 
 
 (defn void-cell? [{type :type}]
@@ -113,8 +115,8 @@
 
 
 (defn valid-push? [board from dest]
-  (let [pushing-piece (get-in board from)
-        dest-piece (get-in board dest)
+  (let [pushing-piece (:piece (get-in board from))
+        dest-piece (:piece (get-in board dest))
         dir-vec (mapv - dest from)]
     (cond 
           (not (pusher? pushing-piece))                          "Not a pusher"
@@ -123,8 +125,6 @@
           (not (can-push? board from dir-vec))                   "Something is blocking this push"
           :else                                                  true)))
 
-(pprint-board sample-board)
-(valid-push? sample-board [3 3] [2 3])
 
 (defn get-available-move-pos 
   ([board [y x]]
