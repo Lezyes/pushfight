@@ -1,6 +1,8 @@
 (ns pushfight.core
   (:require [clojure.pprint :refer [pprint]]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.string :as string]))
+
 
 (def piece-options {:type #{:square :round}
                     :team #{:black :white}})
@@ -206,14 +208,12 @@
 
 
 (defn pprint-board [board]
-  (println (str "  " (clojure.string/join "  " (range 10))))
+  (println (str "  " (string/join "  " (range 10))))
   (let [row-num (atom -1)]
     (println (for [row (board->emoji board)]
-               (prn-str (str (clojure.string/join " " row) " "(swap! row-num inc))))))
+               (prn-str (str (string/join " " row) " "(swap! row-num inc))))))
   (println))
 
-
-(pprint-board sample-board)
 
 (def board (make-standard-board))
 ; 3 squares 
@@ -238,10 +238,6 @@
 
 
 (pprint-board sample-board)
-
-(conj [ 1 2 ] :type)
-
-
 
 
 
