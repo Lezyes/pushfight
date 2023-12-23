@@ -1,5 +1,5 @@
 (ns pushfight.core
-  (:gen-class))
+  (:require [clojure.pprint :refer [pprint]]))
 
 
 (def piece-options {:type #{:square :round}
@@ -55,6 +55,56 @@
         [void-cell   void-cell   wall-cell   wall-cell   wall-cell   wall-cell   wall-cell   void-cell   void-cell   void-cell]])) ;; 5
 
 (def board (make-standard-board))
+; 3 squares 
+; 2 rounds 
+
+(defn place-piece [cell piece]
+   (assoc cell :piece piece))
+
+(-> board
+  (update-in [4 1] place-piece white-round)
+  (update-in [4 2] place-piece white-square)
+  (update-in [4 3] place-piece white-square)
+  (update-in [4 4] place-piece white-round)
+  (update-in [3 3] place-piece white-square)
+  
+  (update-in [5 1] place-piece black-round)
+  (update-in [5 2] place-piece black-square)
+  (update-in [5 3] place-piece black-square)
+  (update-in [5 4] place-piece black-round)
+  (update-in [6 2] place-piece black-square))
+
+
+
+
+(defn print-board [board]
+  (map (fn [row] (map (fn [cell] (let [type (:type cell)
+                                       team (:team cell)]
+                                   (cond 
+                                     (= type (:type floor-cell)) "🔲"
+                                     (= type (:type wall-cell))  "🟫"
+                                     (= type (:type void-cell))  "⬛"
+                                     (and 
+                                       (= type (:type black-square))
+                                       (= team (:team black-square))) "🟪"
+                                     (and 
+                                       (= type (:type black-round))
+                                       (= team (:team black-round)))  "🟣"
+                                     (and 
+                                       (= type (:type white-square))
+                                       (= team (:team white-square))) "🟩"
+                                     (and 
+                                       (= type (:type white-round))
+                                       (= team (:team white-round)))  "🟢")))
+                                     
+                   row)) 
+    board))
+
+(print-board board)
+
+(+ 1)
+
+(defn get-open-positions [])
 
 
 (get-in board [0 1])
