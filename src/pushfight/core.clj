@@ -39,6 +39,26 @@
                    :team :white})
 
 
+(defn pusher? [{type :type}]
+  (= type :square))
+
+
+(defn void-cell? [{type :type}]
+  (= type (:type void-cell)))
+
+
+(defn wall-cell? [{type :type}]
+  (= type (:type wall-cell)))
+
+
+(defn open-cell? [cell]
+  (and 
+    (= (:type cell) (:type floor-cell))
+    (nil? (:piece cell))))
+
+
+
+
 ;; 4x8 board 
 ;; ⬛ ⬛ 🔲 🔲 🔲 🔲 🔲 ⬛ 
 ;; 🔲 🔲 🔲 🔲 🔲 🔲 🔲 🔲
@@ -53,9 +73,6 @@
         [void-cell   void-cell   floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  void-cell   void-cell   void-cell]    ;; 4
         [void-cell   void-cell   wall-cell   wall-cell   wall-cell   wall-cell   wall-cell   void-cell   void-cell   void-cell]])) ;; 5
 
-(def board (make-standard-board))
-; 3 squares 
-; 2 rounds 
 
 (defn place-piece [cell piece]
    (assoc cell :piece piece))
@@ -73,7 +90,6 @@
         source-piece (get-in board [y1 x1 :piece])]
     (loop [board (update-in board from place-piece nil)
            source-piece source-piece
-           [y1 x1 :as from] from
            [y2 x2 :as dest] dest]
       (let [dest-piece (get-in board [y2 x2 :piece])
             new-board (update-in board dest place-piece source-piece)]
@@ -81,15 +97,34 @@
           new-board
           (recur new-board
                  dest-piece
-                 dest
                  (mapv + dir-vec dest)))))))
 
 
-(defn open-cell? [cell]
-  (and 
-    (= (:type cell) (:type floor-cell))
-    (nil? (:piece cell))))
+(defn can-push? [board from dir-vec]
+  (let [next-pos (partial mapv + dir-vec)]
+    (loop [pos (next-pos from)]
+      (let [cell (get-in board pos)]
+        (cond 
+          (void-cell? cell) true
+          (open-cell? cell) true
+          (wall-cell? cell) false
+          (:anchored cell) false
+          :else (recur (next-pos pos)))))))
 
+
+(defn valid-push? [board from dest]
+  (let [pushing-piece (get-in board from)
+        dest-piece (get-in board dest)
+        dir-vec (mapv - dest from)]
+    (cond 
+          (not (pusher? pushing-piece))                          "Not a pusher"
+          (nil? dest-piece)                                      "Nothing in the destination to push"
+          (not (contains? #{[1 0] [-1 0] [0 1] [0 -1]} dir-vec)) "Not in the allowed push boundries"
+          (not (can-push? board from dir-vec))                   "Something is blocking this push"
+          :else                                                  true)))
+
+(pprint-board sample-board)
+(valid-push? sample-board [3 3] [2 3])
 
 (defn get-available-move-pos 
   ([board [y x]]
@@ -98,10 +133,10 @@
          down [(+ y 1) x]
          left [y (- x 1)]
          right [y (+ x 1)]]
-     (get-available-cells board up visited)
-     (get-available-cells board down visited)
-     (get-available-cells board left visited)
-     (get-available-cells board right visited)
+     (get-available-move-pos board up visited)
+     (get-available-move-pos board down visited)
+     (get-available-move-pos board left visited)
+     (get-available-move-pos board right visited)
      @visited))
       
   ([board [y x] visited]
@@ -113,10 +148,10 @@
            right [y (+ x 1)]]
        (when (open-cell? cell)
          (swap! visited set/union #{[y x]})
-         (get-available-cells board up visited)
-         (get-available-cells board down visited)
-         (get-available-cells board left visited)
-         (get-available-cells board right visited)
+         (get-available-move-pos board up visited)
+         (get-available-move-pos board down visited)
+         (get-available-move-pos board left visited)
+         (get-available-move-pos board right visited)
          @visited)))))
 
 
@@ -154,16 +189,16 @@
 (defn board->emoji [board]
   (map (fn [row] (map (fn [cell] (let [type (:type cell)
                                        piece (:piece cell)
-                                       anchored? (:anchored cell)]
+                                       anchored (:anchored cell)]
                                    (cond 
-                                     (= type (:type wall-cell))  "🟫"
-                                     (= type (:type void-cell))  "⬛"
-                                     anchored?                   "🟥"
+                                     (wall-cell? cell)           "🟫"
+                                     (void-cell? cell)           "⬛"
+                                     (open-cell? cell)           "⬜"
+                                     anchored                    "🟥"
                                      (= piece black-square)      "🟪"
                                      (= piece black-round)       "🟣"
                                      (= piece white-square)      "🟩"
                                      (= piece white-round)       "🟢"
-                                     (= type (:type floor-cell)) "⬜"
                                      :else "🦥")))
                                      
                    row)) 
@@ -171,9 +206,18 @@
 
 
 (defn pprint-board [board]
-  (println)
-  (pprint (board->emoji board))
+  (println (str "  " (clojure.string/join "  " (range 10))))
+  (let [row-num (atom -1)]
+    (println (for [row (board->emoji board)]
+               (prn-str (str (clojure.string/join " " row) " "(swap! row-num inc))))))
   (println))
+
+
+(pprint-board sample-board)
+
+(def board (make-standard-board))
+; 3 squares 
+; 2 rounds 
 
 
 (def sample-board
@@ -199,18 +243,6 @@
 
 
 
-(get-available-cells sample-board [3 3])
-(pprint-board (move-piece sample-board [3 3] [1 3]))
-
-(def s (atom #{[0 0]}))
-
-(swap! s set/union #{[ 1 1]})
-
-@s
-(contains? @s [1 0])
-
-
-(get-in board [0 1])
 
 
 
