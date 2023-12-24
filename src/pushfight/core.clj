@@ -188,23 +188,23 @@
          @visited)))))
 
 
+(defn cell->emoji [cell]
+  (let [piece (:piece cell)
+        anchored (:anchored cell)]
+    (cond 
+      (wall-cell? cell)           "🟫"
+      (void-cell? cell)           "⬛"
+      (open-cell? cell)           "⬜"
+      anchored                    "🟥"
+      (= piece black-square)      "🟪"
+      (= piece black-round)       "🟣"
+      (= piece white-square)      "🟩"
+      (= piece white-round)       "🟢"
+      :else "🦥")))
+
+
 (defn board->emoji [board]
-  (map (fn [row] (map (fn [cell] (let [type (:type cell)
-                                       piece (:piece cell)
-                                       anchored (:anchored cell)]
-                                   (cond 
-                                     (wall-cell? cell)           "🟫"
-                                     (void-cell? cell)           "⬛"
-                                     (open-cell? cell)           "⬜"
-                                     anchored                    "🟥"
-                                     (= piece black-square)      "🟪"
-                                     (= piece black-round)       "🟣"
-                                     (= piece white-square)      "🟩"
-                                     (= piece white-round)       "🟢"
-                                     :else "🦥")))
-                                     
-                   row)) 
-    board))
+  (map (fn [row] (map cell->emoji row)) board))
 
 
 (defn pprint-board [board]
@@ -234,11 +234,12 @@
     (update-in [4 5] place-piece black-round)
     (update-in [2 6] place-piece black-square)))
 
+(defn transpose [matrix]
+  (apply mapv vector matrix))
 
 
-
-(pprint-board sample-board)
-
+(pprint-board (transpose sample-board))
+(pprint-board (push-piece sample-board [3 3] [3 4]))
 
 
 
