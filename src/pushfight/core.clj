@@ -217,3 +217,6 @@
   (apply mapv vector matrix))
 
 
+(defn -main [& args]
+  (pprint-board (transpose sample-board)))
+
