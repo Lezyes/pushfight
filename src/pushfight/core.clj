@@ -121,10 +121,10 @@
         dest-piece (:piece (get-in board dest))
         dir-vec (mapv - dest from)]
     (cond 
-          (not (pusher? pushing-piece))                          "Not a pusher"
-          (nil? dest-piece)                                      "Nothing in the destination to push"
-          (not (contains? #{[1 0] [-1 0] [0 1] [0 -1]} dir-vec)) "Not in the allowed push boundries"
-          (not (can-push? board from dir-vec))                   "Something is blocking this push"
+          (not (pusher? pushing-piece))                          false ;; "Not a pusher"
+          (nil? dest-piece)                                      false ;; "Nothing in the destination to push"
+          (not (contains? #{[1 0] [-1 0] [0 1] [0 -1]} dir-vec)) false ;; "Not in the allowed push boundries"
+          (not (can-push? board from dir-vec))                   false ;; "Something is blocking this push"
           :else                                                  true)))
 
 
@@ -157,35 +157,13 @@
          @visited)))))
 
 
-
 (defn get-available-push-pos 
   ([board [y x]]
-   (let [visited (atom #{})
-         up [(- y 1) x]
+   (let [up [(- y 1) x]
          down [(+ y 1) x]
          left [y (- x 1)]
          right [y (+ x 1)]]
-
-     (get-available-cells board up visited)
-     (get-available-cells board down visited)
-     (get-available-cells board left visited)
-     (get-available-cells board right visited)
-     @visited))
-      
-  ([board [y x] visited]
-   (when (not (contains? @visited [y x]))
-     (let [cell (get-in board [y x])
-           up [(- y 1) x]
-           down [(+ y 1) x]
-           left [y (- x 1)]
-           right [y (+ x 1)]]
-       (when (open-cell? cell)
-         (swap! visited set/union #{[y x]})
-         (get-available-cells board up visited)
-         (get-available-cells board down visited)
-         (get-available-cells board left visited)
-         (get-available-cells board right visited)
-         @visited)))))
+     (filter (partial valid-push? board [y x]) [up down left right]))))
 
 
 (defn cell->emoji [cell]
@@ -215,7 +193,7 @@
   (println))
 
 
-(def board (make-standard-board))
+(def empty-board (make-standard-board))
 ; 3 squares 
 ; 2 rounds 
 
@@ -234,16 +212,8 @@
     (update-in [4 5] place-piece black-round)
     (update-in [2 6] place-piece black-square)))
 
+
 (defn transpose [matrix]
   (apply mapv vector matrix))
 
 
-(pprint-board (transpose sample-board))
-(pprint-board (push-piece sample-board [3 3] [3 4]))
-
-
-
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
