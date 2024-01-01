@@ -1,6 +1,6 @@
-(defproject pushfight "0.1.0-SNAPSHOT"
+(defproject org.clojars.lezyes/pushfight "0.1.0-SNAPSHOT"
   :description "pushfight utility library"
-  :url "http://example.com/FIXME"
+  :url "https://github.com/Lezyes/pushfight"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
             :url "https://www.eclipse.org/legal/epl-2.0/"}
 
