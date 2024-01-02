@@ -1,7 +1,7 @@
 (ns rewig.components
-  (:require [reagent.core :refer [with-let]]
+  (:require 
+            ; [reagent.core :as r :refer [with-let]]
             [rewig.util :refer [size-map named-sides-map]]))
-
 
 
 (defn box 
@@ -39,7 +39,12 @@
                               :flex-wrap wrap
                               :flex-direction direction})
 
-        props (assoc attrs :style (merge (:style attrs) css))]
+        props (assoc attrs :style (merge (:style attrs) css))
+        
+        children (cond 
+                   (fn? (first children )) [children]
+                   (keyword? (first children )) [children]
+                   :else children)]
 
     (into [element props] children)))) 
      
