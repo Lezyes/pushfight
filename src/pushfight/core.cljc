@@ -10,16 +10,16 @@
 
 (def cell-options {:type #{:void :wall :floor}
                    :piece #{{:keys [:type :team]} nil}
-                   :anchored #{true false}})
+                   :anchored? #{true false}})
 
 
 (def floor-cell {:type :floor
                  :piece nil
-                 :anchored false})
+                 :anchored? false})
 
 
 (def wall-cell {:type :wall
-                :anchored true})
+                :anchored? true})
 
 
 (def void-cell {:type :void})
@@ -112,7 +112,7 @@
           (void-cell? cell) true
           (open-cell? cell) true
           (wall-cell? cell) false
-          (:anchored cell) false
+          (:anchored? cell) false
           :else (recur (next-pos pos)))))))
 
 
@@ -168,12 +168,12 @@
 
 (defn cell->emoji [cell]
   (let [piece (:piece cell)
-        anchored (:anchored cell)]
+        anchored? (:anchored? cell)]
     (cond 
       (wall-cell? cell)           "🟫"
       (void-cell? cell)           "⬛"
       (open-cell? cell)           "⬜"
-      anchored                    "🟥"
+      anchored?                   "🟥"
       (= piece black-square)      "🟪"
       (= piece black-round)       "🟣"
       (= piece white-square)      "🟩"
