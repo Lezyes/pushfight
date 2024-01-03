@@ -5,29 +5,71 @@
     [rewig.components :refer [box row column]]
     [pushfight.core :as pf]
     [clojure.string :as string]))
+      
 
-
-
-
-(defn cell->box [cell]
+(defn cell->box [cell & {:keys [cell-background]}]
+  ; TODO : FILL ME
   (let [piece (:piece cell)
         anchored? (:anchored? cell)
-        team-color 0
-        piece     (cond 
-                    (nil? piece)    ""
-                    (pf/pusher? piece) ""
-                    :else              "")]))
-                    
+        icon-color (cond 
+                     (some? piece) (get {:black "#282828" :white "#fbf1c7"} (:team piece)) 
+                     anchored?     "#fe8019" 
+                     :transparent  "rgba(0,0,0,0)")
+        icon       (cond 
+                     (pf/wall-cell? cell) "󰟾"
+                     anchored?            ""
+                     (pf/round? piece)    ""
+                     (pf/pusher? piece)   ""
+                     (nil? piece)         "")
+        background-color (cond 
+                           cell-background      cell-background
+                           (pf/void-cell? cell) "rgba(0,0,0,0)"
+                           (pf/wall-cell? cell) "#cc241d"
+                           :else                "#a89984")]
+    
+    [box {:css {:background-color background-color
+                :color icon-color}
+          :padding 3}
+      icon]))
+
 
 (defn display-board [board]
-  [column
-    (for [rn (range (count board)) 
-          :let [r (get board rn)]]
-      [row [
-            (for [cn (range (count r))
-                  :let [cell (get r cn)
-                        cell-key (string/join "-" ["cell" rn cn])]]
-              ^{:key cell-key}[box {:margin 2 :click! #() :css {:background-color (or (get-in cell [:piece :team]) "coral")}} (pf/cell->emoji cell)])]])])
+  (with-let [selected-cell* (r/atom nil)
+             move-to-cells* (r/atom #{})
+             pushable-cells* (r/atom #{})
+             highlight-cells (fn [pos]
+                               (reset! move-to-cells* (pf/get-available-move-pos board pos))
+                               (reset! pushable-cells* (pf/get-available-push-pos board pos))
+                               (reset! selected-cell* pos))
+             clear-selection (fn []
+                               (reset! move-to-cells* nil)
+                               (reset! pushable-cells* nil)
+                               (reset! selected-cell* nil))
+             box_click (fn [cell pos]
+                          (if (:piece cell)
+                            (highlight-cells pos)
+                            (clear-selection)))]
+                            
+     (let [move-to-cells @move-to-cells*
+           selected-cell @selected-cell*
+           pushable-cells @pushable-cells*]
+       [column
+          (for [rn (range (count board)) 
+                :let [r (get board rn)]]
+            [row [
+                   (for [cn (range (count r))
+                         :let [cell (get r cn)
+                               cell-key (string/join "-" ["cell" rn cn])
+                               cell-background (cond 
+                                                 (contains? move-to-cells [rn cn]) "#b8bb26"
+                                                 (contains? pushable-cells [rn cn]) "#cc241d"
+                                                 (= selected-cell [rn cn]) "#458588")]]
+
+                     ^{:key cell-key}[box {:padding 0.2
+                                           :click! #(box_click cell [rn cn])}
+                                       (cell->box cell 
+                                                  :cell-background cell-background)])]])])))
+
 
 (defn app []
   (with-let [board (r/atom pf/sample-board)]

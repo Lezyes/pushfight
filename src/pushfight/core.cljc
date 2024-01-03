@@ -47,6 +47,10 @@
   (= type (:type square-piece)))
 
 
+(defn round? [{type :type}]
+  (= type (:type round-piece)))
+
+
 (defn void-cell? [{type :type}]
   (= type (:type void-cell)))
 
@@ -163,7 +167,7 @@
          down [(+ y 1) x]
          left [y (- x 1)]
          right [y (+ x 1)]]
-     (filter (partial valid-push? board [y x]) [up down left right]))))
+     (set (filter (partial valid-push? board [y x]) [up down left right])))))
 
 
 (defn cell->emoji [cell]
