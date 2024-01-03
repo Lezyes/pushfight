@@ -59,12 +59,18 @@
   (= type (:type wall-cell)))
 
 
+(defn floor-cell? [{type :type}]
+  (= type (:type floor-cell)))
+
+
 (defn open-cell? [cell]
   (and 
     (= (:type cell) (:type floor-cell))
     (nil? (:piece cell))))
 
 
+(defn anchored? [cell]
+  (or (wall-cell? cell) (:anchored? cell) false))
 
 
 ;; 4x8 board 
@@ -83,7 +89,28 @@
 
 
 (defn place-piece [cell piece]
-   (assoc cell :piece piece))
+  (assoc cell :piece piece))
+
+
+(defn anchor-cell [board pos]
+  (update-in board pos #(assoc % :anchored? true)))
+
+
+(defn remove-anchors [board]
+  (into []
+    (for [row board]
+      (into []
+        (for [cell row]
+          (if (floor-cell? cell)
+            (assoc cell :anchored? false)
+            cell))))))
+
+
+(defn game-over? [board]
+  (->> board
+    (map (fn [row] (map (fn [cell] (if (and (void-cell? cell) (:piece cell)) true false)) row)))
+    (apply concat)
+    (some true?)))
 
 
 (defn move-piece [board [y1 x1 :as from] dest]
@@ -115,8 +142,7 @@
         (cond 
           (void-cell? cell) true
           (open-cell? cell) true
-          (wall-cell? cell) false
-          (:anchored? cell) false
+          (anchored? cell) false
           :else (recur (next-pos pos)))))))
 
 
@@ -171,13 +197,12 @@
 
 
 (defn cell->emoji [cell]
-  (let [piece (:piece cell)
-        anchored? (:anchored? cell)]
+  (let [piece (:piece cell)]
     (cond 
       (wall-cell? cell)           "🟫"
       (void-cell? cell)           "⬛"
       (open-cell? cell)           "⬜"
-      anchored?                   "🟥"
+      (anchored? cell)            "🟥"
       (= piece black-square)      "🟪"
       (= piece black-round)       "🟣"
       (= piece white-square)      "🟩"
