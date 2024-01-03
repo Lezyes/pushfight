@@ -33,26 +33,40 @@
       icon]))
 
 
-(defn display-board [board]
+(defn display-board [board*]
   (with-let [selected-cell* (r/atom nil)
              move-to-cells* (r/atom #{})
              pushable-cells* (r/atom #{})
              highlight-cells (fn [pos]
-                               (reset! move-to-cells* (pf/get-available-move-pos board pos))
-                               (reset! pushable-cells* (pf/get-available-push-pos board pos))
+                               (reset! move-to-cells* (pf/get-available-move-pos @board* pos))
+                               (reset! pushable-cells* (pf/get-available-push-pos @board* pos))
                                (reset! selected-cell* pos))
              clear-selection (fn []
                                (reset! move-to-cells* nil)
                                (reset! pushable-cells* nil)
                                (reset! selected-cell* nil))
              box_click (fn [cell pos]
-                          (if (:piece cell)
-                            (highlight-cells pos)
-                            (clear-selection)))]
+                          (cond 
+                            (and (not (:piece cell))
+                                 (not (contains? @move-to-cells* pos))
+                                 (not (contains? @pushable-cells* pos))) (clear-selection)
                             
-     (let [move-to-cells @move-to-cells*
-           selected-cell @selected-cell*
-           pushable-cells @pushable-cells*]
+                            (and (:piece cell)
+                                 (not (contains? @move-to-cells* pos))
+                                 (not (contains? @pushable-cells* pos))) (highlight-cells pos)
+
+                            (and (not (nil? @selected-cell*))
+                                 (contains? @move-to-cells* pos))        (do (swap! board* pf/move-piece @selected-cell* pos)
+                                                                             (clear-selection))
+                            (and (not (nil? @selected-cell*))
+                                 (contains? @pushable-cells* pos))        (do (swap! board* pf/push-piece @selected-cell* pos)
+                                                                              (clear-selection))))]
+
+
+    (let [board @board*
+          selected-cell @selected-cell*
+          move-to-cells @move-to-cells*
+          pushable-cells @pushable-cells*]
        [column
           (for [rn (range (count board)) 
                 :let [r (get board rn)]]
@@ -61,9 +75,9 @@
                          :let [cell (get r cn)
                                cell-key (string/join "-" ["cell" rn cn])
                                cell-background (cond 
-                                                 (contains? move-to-cells [rn cn]) "#b8bb26"
+                                                 (contains? move-to-cells [rn cn])  "#b8bb26"
                                                  (contains? pushable-cells [rn cn]) "#cc241d"
-                                                 (= selected-cell [rn cn]) "#458588")]]
+                                                 (= selected-cell [rn cn])          "#458588")]]
 
                      ^{:key cell-key}[box {:padding 0.2
                                            :click! #(box_click cell [rn cn])}
@@ -72,11 +86,11 @@
 
 
 (defn app []
-  (with-let [board (r/atom pf/sample-board)]
+  (with-let [board* (r/atom pf/sample-board)]
     (let [k (atom 0)]
       [box
         [[box {:css {:color "red"  }} ""]
-         (display-board @board)]])))
+         (display-board board*)]])))
 
 
 (defn ^:export main []
