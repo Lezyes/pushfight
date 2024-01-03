@@ -106,7 +106,6 @@
     (let [board @board*
           unplaced-pieces @unplaced-pieces*
           selected-cell @selected-cell*]
-       (println unplaced-pieces)
        [column
          [[box "pieces to choose from: "]
           [row
