@@ -43,6 +43,18 @@
 (def white-round  (assoc round-piece :team :white))
 
 
+(defn black? [piece]
+  (= :black (:team piece)))
+
+
+(defn white? [piece]
+  (= :white (:team piece)))
+
+
+(defn team? [piece]
+  (:team piece))
+
+
 (defn pusher? [{type :type}]
   (= type (:type square-piece)))
 
@@ -86,6 +98,22 @@
         [void-cell   floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  void-cell]    ;; 3
         [void-cell   void-cell   floor-cell  floor-cell  floor-cell  floor-cell  floor-cell  void-cell   void-cell   void-cell]    ;; 4
         [void-cell   void-cell   wall-cell   wall-cell   wall-cell   wall-cell   wall-cell   void-cell   void-cell   void-cell]])) ;; 5
+
+
+(defn get-half-board-pos [board side]
+  (let [op (case side
+             :left <
+             :right >=)
+    
+        pos (for [rn (range (count board)) 
+                  cn (range (count (get board rn)))
+                  :let [cell (get-in board [rn cn])
+                        half-pos (/ (count (get board rn)) 2)]]
+              (when (and (open-cell? cell) (op cn half-pos))
+                 [rn cn]))]
+    (->> pos
+      (remove nil?)
+      (set))))
 
 
 (defn place-piece [cell piece]
