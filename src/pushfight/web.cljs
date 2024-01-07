@@ -44,8 +44,11 @@
   (with-let [selected-cell* (r/atom nil)
              move-to-cells* (r/atom #{})
              pushable-cells* (r/atom #{})
+             turn-count*     (r/atom 1)
+             team-turn*      (r/atom :white)
+             remaining-moves* (r/atom 2)
              highlight-cells! (fn [pos]
-                               (reset! move-to-cells* (pf/get-available-move-pos @board* pos))
+                               (when (> @remaining-moves* 0) (reset! move-to-cells* (pf/get-available-move-pos @board* pos)))
                                (reset! pushable-cells* (pf/get-available-push-pos @board* pos))
                                (reset! selected-cell* pos))
              clear-selection! (fn []
@@ -54,12 +57,16 @@
                                (reset! selected-cell* nil))
              move-piece!     (fn [src dest]
                                (swap! board* pf/move-piece src dest)
+                               (swap! remaining-moves* dec)
                                (clear-selection!))
              push-piece!     (fn [src dest]
                                (swap! board* pf/remove-anchors)
                                (swap! board* pf/push-piece src dest)
                                (swap! board* pf/anchor-cell dest)
                                (clear-selection!)
+                               (swap! turn-count* inc)
+                               (swap! team-turn* #(if (= % :white) :black :white))
+                               (reset! remaining-moves* 2)
                                (when (pf/game-over? @board*)
                                  (game-over!)))
 
@@ -71,7 +78,8 @@
                             
                             (and (:piece cell)
                                  (not (contains? @move-to-cells* pos))
-                                 (not (contains? @pushable-cells* pos))) (highlight-cells! pos)
+                                 (not (contains? @pushable-cells* pos))
+                                 (= @team-turn* (pf/team? (:piece cell)))) (highlight-cells! pos)
 
                             (and (not (nil? @selected-cell*))
                                  (contains? @move-to-cells* pos))        (move-piece! @selected-cell* pos)
@@ -82,23 +90,34 @@
     (let [board @board*
           selected-cell @selected-cell*
           move-to-cells @move-to-cells*
-          pushable-cells @pushable-cells*]
-       [column
-          (for [rn (range (count board)) 
-                :let [r (get board rn)]]
-            [row [
-                   (for [cn (range (count r))
-                         :let [cell (get r cn)
-                               cell-key (string/join "-" ["cell" rn cn])
-                               cell-background (cond 
-                                                 (contains? move-to-cells [rn cn])  theme/light-green
-                                                 (contains? pushable-cells [rn cn]) theme/danger
-                                                 (= selected-cell [rn cn])          theme/highlight)]]
+          pushable-cells @pushable-cells*
+          turn-count @turn-count*
+          team-turn @team-turn*
+          remaining-moves @remaining-moves*]
+      [column
+       [[row {:css {:color theme/text}}
+          (str "Turn #" turn-count ": " (name team-turn) " turn")]
+        (when (> remaining-moves 0)
+          [row {:css {:color theme/text}}
+            (str remaining-moves " Moves left")])
+        [row {:css {:color theme/text}} "Push to finish the turn"]
+        [gap :size 20]
+        [column
+           (for [rn (range (count board)) 
+                 :let [r (get board rn)]]
+             [row [
+                    (for [cn (range (count r))
+                          :let [cell (get r cn)
+                                cell-key (string/join "-" ["cell" rn cn])
+                                cell-background (cond 
+                                                  (contains? move-to-cells [rn cn])  theme/light-green
+                                                  (contains? pushable-cells [rn cn]) theme/danger
+                                                  (= selected-cell [rn cn])          theme/highlight)]]
 
-                     ^{:key cell-key}[box {:padding 0.2
-                                           :click! #(box_click cell [rn cn])}
-                                       (cell->box cell 
-                                                  :cell-background cell-background)])]])])))
+                      ^{:key cell-key}[box {:padding 0.2
+                                            :click! #(box_click cell [rn cn])}
+                                        (cell->box cell 
+                                                   :cell-background cell-background)])]])]]])))
 
 
 (defn place-pieces [board* start-game!]
@@ -207,19 +226,26 @@
 
 
 (defn app []
-  (with-let [game-lifecycle-stage* (r/atom :start-menu)
-             board* (r/atom (pf/make-standard-board))
+  (with-let [game-lifecycle-stage* (r/atom :game)
+             board* (r/atom pf/sample-board)
              initial-board* (r/atom nil)
+             
              start-game! #(do (reset! initial-board* @board*)
                               (reset! game-lifecycle-stage* :game))
+
              restart-game! #(do (reset! board* @initial-board*)
                                 (reset! game-lifecycle-stage* :game))
+
              default-game! #(do (reset! board* pf/sample-board)
                                 (start-game!))
-             place-pieces! #(do (reset! game-lifecycle-stage* :placement))
+
+             place-pieces! #(do (reset! board* (pf/make-standard-board))
+                                (reset! game-lifecycle-stage* :placement))
+
              game-over!    #(reset! game-lifecycle-stage* :start-menu)]
     (let [k (atom 0)]
-      [box {:css {:background-color theme/background}
+      [box {:css {:background-color theme/background
+                  :height "100%"}
                :size "100%"}
         [[gap :size "35%"]
          (case @game-lifecycle-stage*
