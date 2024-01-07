@@ -2,8 +2,9 @@
   (:require 
     [reagent.core :as r :refer [with-let]]
     [reagent.dom :as rdom]
-    [rewig.components :refer [box row column gap]]
+    [rewig.components :refer [box row column gap button]]
     [pushfight.core :as pf]
+    [rewig.theme.gruvbox :as theme]
     [clojure.string :as string]))
       
 
@@ -13,10 +14,10 @@
         anchored? (pf/anchored? cell)
         icon-color (cond 
                      ; (and (some? piece) anchored?) "#cc241d"
-                     (pf/black? piece) "#282828"
-                     (pf/white? piece) "#fbf1c7"
+                     (pf/black? piece) theme/bg0
+                     (pf/white? piece) theme/fg0
 
-                     anchored?     "#fe8019" 
+                     anchored?     theme/light-orange
                      :transparent  "rgba(0,0,0,0)")
         icon       (cond 
                      (pf/wall-cell? cell) "󰟾"
@@ -29,13 +30,13 @@
         background-color (cond 
                            cell-background      cell-background
                            (pf/void-cell? cell) "rgba(0,0,0,0)"
-                           (pf/wall-cell? cell) "#cc241d"
-                           :else                "#a89984")]
+                           (pf/wall-cell? cell) theme/danger
+                           :else                theme/light-gray)]
     
     [box {:css {:background-color background-color
                 :color icon-color}
           :padding 3}
-      [row {:css {:background-color (when (and anchored? (some? piece)) "#cc241d")}} 
+      [row {:css {:background-color (when (and anchored? (some? piece)) theme/danger)}} 
         icon]]))
 
 
@@ -90,22 +91,23 @@
                          :let [cell (get r cn)
                                cell-key (string/join "-" ["cell" rn cn])
                                cell-background (cond 
-                                                 (contains? move-to-cells [rn cn])  "#b8bb26"
-                                                 (contains? pushable-cells [rn cn]) "#cc241d"
-                                                 (= selected-cell [rn cn])          "#458588")]]
+                                                 (contains? move-to-cells [rn cn])  theme/light-green
+                                                 (contains? pushable-cells [rn cn]) theme/danger
+                                                 (= selected-cell [rn cn])          theme/highlight)]]
 
                      ^{:key cell-key}[box {:padding 0.2
                                            :click! #(box_click cell [rn cn])}
                                        (cell->box cell 
                                                   :cell-background cell-background)])]])])))
 
-
+(empty? (remove nil? [nil  nil]))
 (defn place-pieces [board*]
-  (with-let [unplaced-pieces* (r/atom (concat 
-                                        (repeat 3 pf/white-square)
-                                        (repeat 2 pf/white-round)
-                                        (repeat 2 pf/black-round)
-                                        (repeat 3 pf/black-square))) ;; replace with stack (would also look better...) 
+  (with-let [unplaced-pieces* (r/atom (into []
+                                        (concat 
+                                          (repeat 3 pf/white-square)
+                                          (repeat 2 pf/white-round)
+                                          (repeat 2 pf/black-round)
+                                          (repeat 3 pf/black-square)))) ;; replace with stack (would also look better...) 
              selected-cell*   (r/atom nil)
              move-to-cells* (r/atom #{})
              clear-selection! (fn []
@@ -141,13 +143,14 @@
           unplaced-pieces @unplaced-pieces*
           selected-cell @selected-cell*
           move-to-cells @move-to-cells*]
+       (println (some? unplaced-pieces))
        [column
-         [[box "pieces to choose from: "]
+         [[box {:css {:color theme/text}} "pieces to choose from: "]
           [row
              (for [idx (range (count unplaced-pieces))
                    :let [piece (nth unplaced-pieces idx)
                          cell-background (cond 
-                                           (= selected-cell idx) "#458588")]]
+                                           (= selected-cell idx) theme/highlight)]]
                ^{:key idx}[box {:padding 0.2
                                 :click! #(box_click piece idx)}
                              (cell->box (assoc pf/floor-cell :piece piece)
@@ -161,12 +164,19 @@
                             :let [cell (get r cn)
                                   cell-key (string/join "-" ["cell" rn cn])
                                   cell-background (cond 
-                                                    (contains? move-to-cells [rn cn])  "#b8bb26")]]
+                                                    (contains? move-to-cells [rn cn])  theme/light-green)]]
 
                         ^{:key cell-key}[box {:padding 0.2
                                               :click! #(box_click (:piece cell) [rn cn])}
                                           (cell->box cell 
-                                                     :cell-background cell-background)])]])]]])))
+                                                     :cell-background cell-background)])]])]
+          [gap :size 10]
+          [button {:css {:background-color theme/primary
+                         :color theme/text}
+                   :disabled? false;(not-empty (remove nil? unplaced-pieces)) 
+                   :align :center :content-align :center
+                   :click! #()}
+            "Ready!"]]])))
 
 
 
@@ -175,7 +185,8 @@
   (with-let [game-lifecycle-stage* (r/atom :placement)
              board* (r/atom (pf/make-standard-board))]
     (let [k (atom 0)]
-      [box
+      [box {:css {:background-color theme/background}
+                 :size "100%"}
         [[box {:css {:color "red"  }} ""]
          (cond 
            (= :placement @game-lifecycle-stage*) (place-pieces board*)
