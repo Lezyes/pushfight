@@ -1,15 +1,15 @@
 (ns rewig.components
   (:require 
             ; [reagent.core :as r :refer [with-let]]
-            [rewig.util :refer [size-map named-sides-map]]))
-
+            [rewig.util :refer [size-map named-sides-map]]
+            [rewig.theme.gruvbox :as theme]))
 
 (defn box 
   ([children]
    (box {} children))
   ([{:keys [element 
             align content-align wrap direction display 
-            hidden? reverse? disabled?
+            hidden? reverse?
             size padding margin 
             click!
             attrs
@@ -17,8 +17,8 @@
    (let [
          element       (or element :div)
          attrs         (merge (or attrs {}) 
-                              {:on-click click! 
-                               :disabled disabled?})
+                              {:on-click click!}) 
+                               
 
          hidden?       (or hidden? false)
          reverse?      (or reverse? false)
@@ -74,6 +74,34 @@
 (defn button 
   ([children]
    (button {} children))
-  ([props children]
-   (let [props (assoc props :element :button)]
+  ([{:keys [disabled? click! attrs type css] :as props} children]
+   (let [attrs (merge attrs 
+                       {:disabled disabled?})
+         type (or type :normal)
+         css (merge {:cursor "pointer"
+                     :border "none"}
+                    (case type
+                      :normal  {:background-color theme/bg0
+                                :color theme/fg0}
+                                
+                      :primary {:background-color theme/primary
+                                :color theme/fg0}
+                                
+                      :success {:background-color theme/success
+                                :color theme/fg0}
+                                
+                      :danger  {:background-color theme/danger
+                                :color theme/fg0})
+                                
+
+                    (when disabled?
+                      {:color theme/fg4
+                       :cursor "not-allowed"
+                       :opacity "0.25"})
+                    css)
+
+
+         props (assoc props :element :button
+                            :attrs attrs
+                            :css css)]
      (box props children))))

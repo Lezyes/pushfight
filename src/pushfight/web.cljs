@@ -40,7 +40,7 @@
         icon]]))
 
 
-(defn game [board*]
+(defn game [board* game-over!]
   (with-let [selected-cell* (r/atom nil)
              move-to-cells* (r/atom #{})
              pushable-cells* (r/atom #{})
@@ -61,7 +61,7 @@
                                (swap! board* pf/anchor-cell dest)
                                (clear-selection!)
                                (when (pf/game-over? @board*)
-                                 (println "GAME OVER")))
+                                 (game-over!)))
 
              box_click (fn [cell pos]
                           (cond 
@@ -100,8 +100,8 @@
                                        (cell->box cell 
                                                   :cell-background cell-background)])]])])))
 
-(empty? (remove nil? [nil  nil]))
-(defn place-pieces [board*]
+
+(defn place-pieces [board* start-game!]
   (with-let [unplaced-pieces* (r/atom (into []
                                         (concat 
                                           (repeat 3 pf/white-square)
@@ -120,7 +120,6 @@
                                   (reset! move-to-cells* (pf/get-half-board-pos @board* side))
                                   (reset! selected-cell* pos)))
              move-piece!      (fn [src dest]
-                                (println "move" src dest (get @unplaced-pieces* src))
                                 (cond 
                                   (number? src) (do (swap! board* update-in dest pf/place-piece (nth @unplaced-pieces* src))
                                                     (swap! unplaced-pieces* assoc src nil)
@@ -143,7 +142,6 @@
           unplaced-pieces @unplaced-pieces*
           selected-cell @selected-cell*
           move-to-cells @move-to-cells*]
-       (println (some? unplaced-pieces))
        [column
          [[box {:css {:color theme/text}} "pieces to choose from: "]
           [row
@@ -171,26 +169,63 @@
                                           (cell->box cell 
                                                      :cell-background cell-background)])]])]
           [gap :size 10]
-          [button {:css {:background-color theme/primary
-                         :color theme/text}
-                   :disabled? false;(not-empty (remove nil? unplaced-pieces)) 
-                   :align :center :content-align :center
-                   :click! #()}
-            "Ready!"]]])))
+          [row   
+            [[gap :size 60]      
+             [button {
+                      ; :css {:background-color theme/primary}
+                      ;       :color theme/text}
+                      :type :danger
+                      :disabled? (not-empty (remove nil? unplaced-pieces)) 
+                      ; :align :center :content-align :center
+                      :click! start-game!}
+               "Start Game!"]]]]])))
 
 
+(defn start-menu [board* initial-board* start-game! restart-game! default-game! place-pieces!]
+  (let [board @board*
+        initial-board @initial-board*]
+    [column
+      [
+       [gap :size 10]
+       [button {
+                :type :danger
+                :click! place-pieces!}
+         "Place Pieces"]
+       [gap :size 10]
+       (when @initial-board*
+         [button {
+                  :type :danger
+                  :click! restart-game!}
+           "Reuse Arrangement"])
+       (when @initial-board*
+         [gap :size 10])
+       [button {
+                :type :danger
+                :click! default-game!}
+         "Default Arrangement"]
+       [gap :size 10]]]))
 
 
 (defn app []
-  (with-let [game-lifecycle-stage* (r/atom :placement)
-             board* (r/atom (pf/make-standard-board))]
+  (with-let [game-lifecycle-stage* (r/atom :start-menu)
+             board* (r/atom (pf/make-standard-board))
+             initial-board* (r/atom nil)
+             start-game! #(do (reset! initial-board* @board*)
+                              (reset! game-lifecycle-stage* :game))
+             restart-game! #(do (reset! board* @initial-board*)
+                                (reset! game-lifecycle-stage* :game))
+             default-game! #(do (reset! board* pf/sample-board)
+                                (start-game!))
+             place-pieces! #(do (reset! game-lifecycle-stage* :placement))
+             game-over!    #(reset! game-lifecycle-stage* :start-menu)]
     (let [k (atom 0)]
       [box {:css {:background-color theme/background}
-                 :size "100%"}
-        [[box {:css {:color "red"  }} ""]
-         (cond 
-           (= :placement @game-lifecycle-stage*) (place-pieces board*)
-           (= :game @game-lifecycle-stage*) (game board*))]])))
+               :size "100%"}
+        [[gap :size "35%"]
+         (case @game-lifecycle-stage*
+           :start-menu (start-menu board* initial-board* start-game! restart-game! default-game! place-pieces!)
+           :placement (place-pieces board* start-game!) ; [box "hello"]]
+           :game (game board* game-over!))]])))
 
 
 (defn ^:export main []
